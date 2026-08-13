@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Reconhecimento — Patrícia</title>
+<style>
+    * { box-sizing: border-box; }
+    html, body { margin:0; min-height:100%; }
+    body {
+        background:#070a0f;
+        color:#eef2f7;
+        font-family: Inter, Segoe UI, Arial, sans-serif;
+        overflow-x:hidden;
+    }
+    button {
+        font:inherit;
+        cursor:pointer;
+    }
+    .screen {
+        min-height:100vh;
+        display:none;
+        align-items:center;
+        justify-content:center;
+        padding:28px;
+    }
+    .screen.active { display:flex; }
+    .terminal {
+        width:min(900px, 100%);
+        min-height:520px;
+        border:1px solid #263241;
+        border-radius:18px;
+        background:#0b1017;
+        box-shadow:0 25px 80px rgba(0,0,0,.45);
+        overflow:hidden;
+    }
+    .terminal-bar {
+        height:44px;
+        display:flex;
+        align-items:center;
+        gap:8px;
+        padding:0 16px;
+        border-bottom:1px solid #202a35;
+        background:#10161e;
+    }
+    .dot { width:10px; height:10px; border-radius:50%; background:#596575; }
+    .terminal-title { margin-left:8px; color:#8793a2; font-size:13px; }
+    #terminalOutput {
+        padding:28px;
+        white-space:pre-wrap;
+        line-height:1.8;
+        color:#b8c5d4;
+        font-family:Consolas, "Courier New", monospace;
+        font-size:15px;
+    }
+    .cursor {
+        display:inline-block;
+        width:8px;
+        height:17px;
+        background:#d9e2ec;
+        vertical-align:-3px;
+        animation:blink 1s infinite;
+    }
+    @keyframes blink { 50%{opacity:0;} }
+
+    .panel {
+        width:min(980px,100%);
+        padding:42px;
+        border:1px solid #273241;
+        border-radius:24px;
+        background:linear-gradient(145deg,#111923,#0b1017);
+        box-shadow:0 25px 80px rgba(0,0,0,.38);
+    }
+    .eyebrow {
+        text-transform:uppercase;
+        letter-spacing:.18em;
+        font-size:11px;
+        color:#8fa0b3;
+        margin-bottom:12px;
+    }
+    h1,h2,p { margin-top:0; }
+    h1 {
+        font-size:clamp(34px,6vw,68px);
+        line-height:1.02;
+        margin-bottom:18px;
+        letter-spacing:-.04em;
+    }
+    h2 {
+        font-size:clamp(27px,4vw,44px);
+        line-height:1.1;
+        letter-spacing:-.025em;
+    }
+    .lead {
+        color:#aeb9c6;
+        font-size:18px;
+        line-height:1.7;
+        max-width:760px;
+    }
+    .accent { color:#d9e2ec; }
+    .button {
+        border:1px solid #506176;
+        background:#e9eef4;
+        color:#0a0f15;
+        border-radius:12px;
+        padding:12px 18px;
+        font-weight:700;
+        margin-top:18px;
+        transition:.2s;
+    }
+    .button:hover { transform:translateY(-2px); }
+    .ghost {
+        background:transparent;
+        color:#dce5ef;
+    }
+    .hidden { display:none !important; }
+
+    .metrics {
+        display:grid;
+        grid-template-columns:repeat(2,1fr);
+        gap:14px;
+        margin:28px 0;
+    }
+    .metric {
+        padding:22px;
+        border:1px solid #263241;
+        border-radius:16px;
+        background:#0c1219;
+    }
+    .metric strong { display:block; font-size:24px; margin-bottom:6px; }
+    .metric span { color:#8290a0; font-size:13px; }
+    .stars { letter-spacing:4px; margin-top:10px; }
+
+    .story {
+        border-left:2px solid #66788d;
+        padding:5px 0 5px 24px;
+        margin:28px 0;
+    }
+    .story p { color:#bdc7d3; line-height:1.85; font-size:17px; }
+
+    .motorcycle {
+        text-align:center;
+        padding:32px;
+        border:1px solid #2c3948;
+        border-radius:18px;
+        background:#0b1118;
+        margin:28px 0;
+    }
+    .bike { font-size:60px; margin-bottom:8px; }
+    .status {
+        font-family:Consolas,monospace;
+        color:#aebccc;
+        line-height:1.9;
+        margin:15px auto;
+        max-width:570px;
+        text-align:left;
+        background:#070b10;
+        border-radius:12px;
+        padding:18px;
+    }
+    .warning { color:#d7dee7; font-weight:700; }
+
+    .error {
+        font-family:Consolas,monospace;
+        color:#bfcbd8;
+        border:1px solid #394656;
+        background:#080d13;
+        border-radius:14px;
+        padding:24px;
+        margin:25px 0;
+        line-height:1.8;
+    }
+
+    .reveal {
+        opacity:0;
+        transform:translateY(18px);
+        animation:reveal .7s forwards;
+    }
+    @keyframes reveal { to { opacity:1; transform:none; } }
+
+    .letter {
+        max-width:780px;
+        margin:auto;
+        font-family:Georgia, "Times New Roman", serif;
+        font-size:19px;
+        line-height:1.9;
+        color:#d5dce5;
+    }
+    .letter p { margin:0 0 23px; }
+    .letter .opening {
+        font-family:Inter,Segoe UI,Arial,sans-serif;
+        font-size:32px;
+        font-weight:700;
+        margin-bottom:30px;
+    }
+    .signature {
+        margin-top:35px;
+        font-family:Inter,Segoe UI,Arial,sans-serif;
+        font-weight:700;
+        line-height:1.4;
+    }
+    .signature small { font-weight:400; color:#8e9bab; }
+
+    .final {
+        text-align:center;
+        max-width:850px;
+    }
+    .final h1 { font-size:clamp(40px,8vw,90px); }
+    .final p {
+        color:#bac5d1;
+        font-size:19px;
+        line-height:1.8;
+        max-width:720px;
+        margin:0 auto 18px;
+    }
+    .heart {
+        font-size:34px;
+        margin:25px 0 8px;
+        animation:pulse 1.8s infinite;
+    }
+    @keyframes pulse { 50% { transform:scale(1.13); } }
+
+    .progress {
+        height:3px;
+        background:#202a35;
+        position:fixed;
+        top:0;
+        left:0;
+        width:0;
+        z-index:50;
+        transition:width .5s;
+    }
+
+    @media(max-width:650px) {
+        .panel { padding:26px 20px; }
+        .metrics { grid-template-columns:1fr; }
+        .screen { padding:15px; }
+        #terminalOutput { padding:20px; font-size:13px; }
+    }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<section class="screen active" id="screenTerminal">
+    <div class="terminal">
+        <div class="terminal-bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="terminal-title">TI — sistema_de_reconhecimento.exe</span>
+        </div>
+        <div id="terminalOutput"></div>
+    </div>
+</section>
+
+<section class="screen" id="screenResult">
+    <div class="panel reveal">
+        <div class="eyebrow">Análise concluída</div>
+        <h1>Encontramos algo que o sistema não consegue medir.</h1>
+        <p class="lead">
+            Durante 11 meses, foram analisados liderança, confiança, cuidado,
+            humanidade, risadas, broncas, aprendizados e muitos pequenos momentos.
+        </p>
+        <div class="error">
+            <strong>ERRO 404</strong><br>
+            Unidade de medida para gratidão não encontrada.<br>
+            <br>
+            Motivo: existem pessoas cujo impacto não pode ser convertido em números.
+        </div>
+        <button class="button" onclick="go('screenEvaluation', 40)">Continuar análise →</button>
+    </div>
+</section>
+
+<section class="screen" id="screenEvaluation">
+    <div class="panel">
+        <div class="eyebrow">Avaliação institucional não-oficial</div>
+        <h2>Patrícia, coordenadora.exe</h2>
+        <p class="lead">O sistema tentou transformar você em números. Não deu muito certo.</p>
+
+        <div class="metrics">
+            <div class="metric"><strong>Liderança</strong><span>Capacidade de conduzir pessoas</span><div class="stars">★★★★★</div></div>
+            <div class="metric"><strong>Humanidade</strong><span>Enxergar a pessoa antes da função</span><div class="stars">★★★★★</div></div>
+            <div class="metric"><strong>Cuidado</strong><span>Nível de preocupação com a equipe</span><div class="stars">★★★★★</div></div>
+            <div class="metric"><strong>Confiança</strong><span>Capacidade de fazer alguém acreditar em si</span><div class="stars">★★★★★</div></div>
+        </div>
+
+        <div class="error">
+            <strong>RESULTADO FINAL:</strong><br>
+            Capacidade de transformar pessoas: <strong>INDEFINIDA</strong><br><br>
+            O sistema não possui métricas suficientes para mensurar.
+        </div>
+
+        <button class="button" onclick="go('screenCare', 55)">Ver ocorrência especial →</button>
+    </div>
+</section>
+
+<section class="screen" id="screenCare">
+    <div class="panel">
+        <div class="eyebrow">Ocorrência detectada</div>
+        <h2>Módulo de cuidado pessoal</h2>
+        <p class="lead">Foi identificado um comportamento incomum para uma coordenadora.</p>
+
+        <div class="motorcycle">
+            <div class="bike">🏍️</div>
+            <div class="status">
+                > Evento detectado: Eduardo demorou para chegar.<br>
+                > Sistema buscando possíveis causas...<br><br>
+                [ ] Problema no computador<br>
+                [ ] Problema na rede<br>
+                [ ] Chamado emergencial<br>
+                [x] Eduardo está de moto<br><br>
+                <span class="warning">> NÍVEL DE PREOCUPAÇÃO DA PATRÍCIA: 97%</span>
+            </div>
+            <p class="lead" style="font-size:16px;">
+                “Vai devagar.”<br>
+                “Você já chegou?”<br>
+                “Cuidado com essa moto.”
+            </p>
+        </div>
+
+        <div class="story">
+            <p>
+                Brincadeiras à parte, talvez você nem perceba o tamanho que esse tipo de
+                cuidado tem para mim. Eu nunca tinha vivido, no ambiente de trabalho,
+                uma preocupação tão genuína com a minha pessoa, com a minha segurança
+                e com o meu bem-estar.
+            </p>
+            <p>
+                Às vezes parece mesmo que, além de coordenadora, você acabou assumindo
+                um pouquinho o papel de mãe do carinha da TI. E, sinceramente,
+                eu acho isso bonito.
+            </p>
+        </div>
+
+        <button class="button" onclick="go('screenTrust', 70)">Continuar →</button>
+    </div>
+</section>
+
+<section class="screen" id="screenTrust">
+    <div class="panel">
+        <div class="eyebrow">Registro de origem</div>
+        <h2>Antes de eu mostrar o que poderia fazer, você decidiu acreditar.</h2>
+
+        <div class="story">
+            <p>
+                Eu ainda lembro daquela entrevista. Lembro do carinho com que você me
+                recebeu e do momento em que decidiu apostar em mim.
+            </p>
+            <p>
+                Você não tinha como saber tudo o que eu poderia fazer, quem eu seria
+                dentro da escola ou até onde conseguiria chegar. Mesmo assim, você confiou.
+            </p>
+            <p>
+                E, desde então, cada oportunidade, cada reconhecimento, cada conversa
+                e até cada “puxão de orelha” ajudaram a construir um pouco do profissional
+                que estou me tornando.
+            </p>
+        </div>
+
+        <div class="error">
+            <strong>LOG DE APRENDIZADO</strong><br><br>
+            Confiança recebida → responsabilidade assumida → crescimento gerado.
+        </div>
+
+        <button class="button" onclick="go('screenLetter', 85)">Abrir mensagem pessoal →</button>
+    </div>
+</section>
+
+<section class="screen" id="screenLetter">
+    <div class="panel">
+        <div class="letter">
+            <div class="opening">Patrícia,</div>
+
+            <p>
+                Talvez você tenha começado essa página achando que seria apenas mais
+                uma brincadeira do carinha da TI. E, de certa forma, é mesmo.
+                Mas existem algumas coisas que eu queria te dizer e talvez nunca tenha
+                conseguido colocar em palavras.
+            </p>
+
+            <p>
+                Quero relembrar cada momento que tive o privilégio de compartilhar
+                com você nestes 11 meses: as risadas, as piadas, as conversas, as
+                preocupações, as discordâncias e, principalmente, o carinho e a
+                confiança que você sempre demonstrou pelo meu trabalho.
+            </p>
+
+            <p>
+                Quando olho para esse período, percebo que não ganhei apenas uma
+                coordenadora. Ganhei alguém que cuidou de mim com uma preocupação
+                que, muitas vezes, chega a ser quase maternal.
+            </p>
+
+            <p>
+                Você me ensinou que liderar não é apenas olhar para números, resultados,
+                demandas e responsabilidades. É olhar para pessoas.
+            </p>
+
+            <p>
+                Você se preocupa com o colaborador que existe por trás de cada função,
+                de cada cargo e de cada tarefa. Se esforça para que nós possamos
+                trabalhar bem, mas também para que possamos trabalhar com alegria,
+                dignidade e em um ambiente onde nos sintamos acolhidos.
+            </p>
+
+            <p>
+                Esse é um diferencial que eu vejo em você e que, infelizmente,
+                não encontro em grande parte dos gestores.
+            </p>
+
+            <p>
+                É claro que nem tudo foram risadas. Tivemos nossas discordâncias,
+                conflitos, conversas difíceis e aqueles momentos em que provavelmente
+                um olhou para o outro pensando: “Meu Deus, por que essa pessoa está
+                fazendo isso?”.
+            </p>
+
+            <p>
+                Mas até esses momentos foram importantes. Porque você nunca deixou
+                de me tratar com respeito. Quando foi necessário, você me chamou,
+                me corrigiu, puxou minha orelha e me mostrou aquilo que eu precisava
+                enxergar.
+            </p>
+
+            <p>
+                Hoje eu entendo que isso também é cuidado.
+            </p>
+
+            <p>
+                E talvez uma das coisas mais bonitas em uma liderança seja justamente
+                isso: ter alguém que acredita em você o suficiente para reconhecer
+                suas qualidades, mas que também gosta de você o suficiente para
+                apontar seus erros.
+            </p>
+
+            <p>
+                Por tudo isso, Patrícia, eu só tenho a agradecer.
+            </p>
+
+            <p>
+                Obrigado por acreditar em mim quando talvez eu mesmo ainda estivesse
+                descobrindo do que era capaz. Obrigado por reconhecer meu trabalho.
+                Obrigado pelas conversas, pelas risadas, pelas broncas, pela preocupação
+                e pelo carinho.
+            </p>
+
+            <p>
+                Obrigado por enxergar o Eduardo que existe por trás do “carinha da TI”.
+            </p>
+
+            <p>
+                E, principalmente, obrigado por ser uma líder que não esquece que,
+                antes de sermos colaboradores, somos pessoas.
+            </p>
+
+            <p>
+                Desejo que seu retiro seja um momento muito especial. Que você consiga,
+                por alguns instantes, deixar de lado o peso das responsabilidades,
+                respirar fundo, aquietar o coração e simplesmente estar na presença de Deus.
+            </p>
+
+            <p>
+                Que seja um momento para descansar a cabeça, renovar suas forças e
+                lembrar que, assim como você tantas vezes cuida das pessoas ao seu redor,
+                também existe alguém que cuida de você.
+            </p>
+
+            <p>
+                Que Deus continue guiando cada passo da sua vida, em todas as áreas.
+                E que você volte ainda mais cheia daquilo que já transmite por onde passa:
+                luz, esperança, acolhimento e amor.
+            </p>
+
+            <p>
+                Cristo te ama, Patrícia. Cristo conhece cada sonho, cada preocupação,
+                cada batalha silenciosa e cada responsabilidade que você carrega.
+                E eu desejo, de coração, que você nunca se esqueça de que não precisa
+                carregar tudo sozinha.
+            </p>
+
+            <p>
+                Que Deus abençoe imensamente sua vida, sua família, seus projetos,
+                seu trabalho e todos os caminhos que ainda estão por vir.
+            </p>
+
+            <p>
+                E se algum dia você se perguntar se valeu a pena acreditar em certas
+                pessoas, espero que se lembre de mim.
+            </p>
+
+            <p>
+                Porque, em algum momento da minha caminhada, você decidiu acreditar
+                em um rapaz e dar uma oportunidade para ele mostrar quem era.
+                Eu espero, de coração, ter feito valer a pena.
+            </p>
+
+            <div class="signature">
+                Com carinho e gratidão,<br><br>
+                Eduardo<br>
+                <small>o carinha da TI.</small>
+            </div>
+        </div>
+
+        <div style="text-align:center;margin-top:40px;">
+            <button class="button" onclick="go('screenFinal', 100)">Registrar agradecimento →</button>
+        </div>
+    </div>
+</section>
+
+<section class="screen" id="screenFinal">
+    <div class="panel final reveal">
+        <div class="eyebrow">Registro permanente</div>
+        <div class="heart">♥</div>
+        <h1>Você fez diferença.</h1>
+        <p>
+            Não apenas como coordenadora.<br>
+            Não apenas como líder.<br>
+            <strong>Mas como pessoa.</strong>
+        </p>
+        <p>
+            Algumas pessoas passam pelo nosso caminho e deixam lembranças.
+            Outras deixam ensinamentos.
+            E existem aquelas que, sem perceber, ajudam a construir quem nós somos.
+        </p>
+        <p>
+            Você é uma dessas pessoas para mim.
+        </p>
+        <p style="margin-top:35px;">
+            Que Deus abençoe sua caminhada, Patrícia.<br>
+            E que você continue espalhando a luz que já carrega consigo.
+        </p>
+        <div class="signature" style="margin-top:40px;">
+            Eduardo<br>
+            <small>o carinha da TI.</small>
+        </div>
+    </div>
+</section>
+
+<script>
+const screens = [
+    "screenTerminal","screenResult","screenEvaluation",
+    "screenCare","screenTrust","screenLetter","screenFinal"
+];
+
+function go(id, progress) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    document.getElementById("progress").style.width = progress + "%";
+    window.scrollTo({top:0, behavior:"smooth"});
+}
+
+const lines = [
+    "> Iniciando sistema de reconhecimento...",
+    "> Carregando banco de memórias...",
+    "> Identificando colaborador: EDUARDO",
+    "> Identificando coordenadora responsável: PATRÍCIA",
+    "> Período analisado: 11 meses",
+    "",
+    "> Executando análise de liderança... 100%",
+    "> Executando análise de humanidade... 100%",
+    "> Executando análise de cuidado... 100%",
+    "> Executando análise de confiança... 100%",
+    "",
+    "> Cruzando dados...",
+    "> Comparando resultados...",
+    "> Procurando uma unidade de medida para impacto humano...",
+    "",
+    "ERRO: unidade de medida não encontrada.",
+    "",
+    "> O sistema encontrou algo que não consegue calcular.",
+    "",
+    "Pressione o botão abaixo para descobrir."
+];
+
+const output = document.getElementById("terminalOutput");
+let lineIndex = 0;
+
+function typeLine() {
+    if (lineIndex >= lines.length) {
+        output.innerHTML += '<br><button class="button" onclick="go(\'screenResult\', 20)">Executar diagnóstico →</button>';
+        return;
+    }
+
+    const text = lines[lineIndex];
+    let char = 0;
+    const span = document.createElement("span");
+    output.appendChild(span);
+
+    function typeChar() {
+        if (char < text.length) {
+            span.textContent += text.charAt(char++);
+            setTimeout(typeChar, text.charAt(char-1) === " " ? 8 : 18);
+        } else {
+            output.appendChild(document.createElement("br"));
+            lineIndex++;
+            setTimeout(typeLine, text === "" ? 180 : 90);
+        }
+    }
+    typeChar();
+}
+
+setTimeout(typeLine, 700);
+</script>
+
+</body>
+</html>
